@@ -7,38 +7,91 @@ import androidx.loader.content.CursorLoader;
 import android.content.Intent;
 import android.database.Cursor;
 import android.media.Image;
+import android.media.ImageReader;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-public class SignupActivity extends AppCompatActivity {
-    ImageView imgG;
-    String imagePath;
+import com.aakriti.taskmanager.api.UsersAPI;
+import com.aakriti.taskmanager.model.Users;
+import com.aakriti.taskmanager.serverresponse.ImageResponse;
+import com.aakriti.taskmanager.serverresponse.SignUpResponse;
+import com.aakriti.taskmanager.strictmode.StrictModeClass;
+import com.aakriti.taskmanager.url.URL;
 
+import java.io.File;
+import java.io.IOException;
+
+import de.hdodenhof.circleimageview.CircleImageView;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+public class SignupActivity extends AppCompatActivity {
+    private CircleImageView imgProfile;
+    private EditText etFirstName, etLastName, etSignUpUsername, etSignUpPassword, etConfirmPassword;
+    private Button btnSignup;
+    String imagePath;
+    private String imageName = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
 
-        imgG = findViewById(R.id.imageG);
+        imgProfile = findViewById(R.id.imgProfile);
+        etFirstName = findViewById(R.id.etFirstname);
+        etLastName = findViewById(R.id.etLastname);
+        etSignUpUsername = findViewById(R.id.etUsername);
+        etSignUpPassword = findViewById(R.id.etPassword);
+        etConfirmPassword = findViewById(R.id.etConfirmPass);
+        btnSignup = findViewById(R.id.btnSignup);
 
-        imgG.setOnClickListener(new View.OnClickListener() {
+        imgProfile.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 BrowseImage();
             }
         });
+        btnSignup.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (etSignUpPassword.getText().toString().equals(etConfirmPassword.getText().toString())) {
+                    if(validate()) {
+                        saveImageOnly();
+                        signUp();
+                    }
+                } else {
+                    Toast.makeText(SignupActivity.this, "Password does not match", Toast.LENGTH_SHORT).show();
+                    etSignUpPassword.requestFocus();
+                    return;
+                }
 
-
+            }
+        });
     }
 
+    private boolean validate() {
+        boolean status=true;
+        if (etSignUpUsername.getText().toString().length() < 6) {
+            etSignUpUsername.setError("Minimum 6 character");
+            status=false;
+        }
+        return status;
+    }
 
-
-    private void BrowseImage(){
+    private void BrowseImage() {
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setType("image/*");
         startActivityForResult(intent, 0);
@@ -50,24 +103,75 @@ public class SignupActivity extends AppCompatActivity {
 
         if (resultCode == RESULT_OK) {
             if (data == null) {
-                Toast.makeText(this, "Please select an image", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Please select an image ", Toast.LENGTH_SHORT).show();
             }
-            Uri uri = data.getData();
-            imagePath = getRealPathFromUri(uri);
-            imgG.setImageURI(uri);
         }
-
+        Uri uri = data.getData();
+        imgProfile.setImageURI(uri);
+        imagePath = getRealPathFromUri(uri);
     }
 
     private String getRealPathFromUri(Uri uri) {
         String[] projection = {MediaStore.Images.Media.DATA};
-        CursorLoader loader = new CursorLoader(getApplicationContext(), uri, projection, null, null, null);
+        CursorLoader loader = new CursorLoader(getApplicationContext(),
+                uri, projection, null, null, null);
         Cursor cursor = loader.loadInBackground();
         int colIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
         cursor.moveToFirst();
         String result = cursor.getString(colIndex);
         cursor.close();
         return result;
+    }
 
+    private void saveImageOnly() {
+        File file = new File(imagePath);
+        RequestBody requestBody = RequestBody.create(MediaType.parse("multipart/form-data"), file);
+        MultipartBody.Part body = MultipartBody.Part.createFormData("imageFile",
+                file.getName(), requestBody);
+
+        UsersAPI usersAPI = URL.getInstance().create(UsersAPI.class);
+        Call<ImageResponse> responseBodyCall = usersAPI.uploadImage(body);
+
+        StrictModeClass.StrictMode();
+        //Synchronous methid
+        try {
+            Response<ImageResponse> imageResponseResponse = responseBodyCall.execute();
+            imageName = imageResponseResponse.body().getFilename();
+            Toast.makeText(this, "Image inserted" + imageName, Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            Toast.makeText(this, "Error" + e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
+    }
+
+    private void signUp() {
+
+
+
+        String fname = etFirstName.getText().toString();
+        String lname = etLastName.getText().toString();
+        String username = etSignUpUsername.getText().toString();
+        String password = etSignUpPassword.getText().toString();
+
+        Users users = new Users(fname, lname, username, password, imageName);
+
+        UsersAPI usersAPI = URL.getInstance().create(UsersAPI.class);
+        Call<SignUpResponse> signUpCall = usersAPI.registerUser(users);
+
+        signUpCall.enqueue(new Callback<SignUpResponse>() {
+            @Override
+            public void onResponse(Call<SignUpResponse> call, Response<SignUpResponse> response) {
+                if (!response.isSuccessful()) {
+                    Toast.makeText(SignupActivity.this, "Code " + response.code(), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Toast.makeText(SignupActivity.this, "Registered", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFailure(Call<SignUpResponse> call, Throwable t) {
+                Toast.makeText(SignupActivity.this, "Error" + t.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

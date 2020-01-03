@@ -10,7 +10,7 @@
     tools:context=".LoginActivity">
 
     <EditText
-        android:id="@+id/etUsername"
+        android:id="@+id/etUsernameL"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
@@ -21,7 +21,7 @@
         />
 
     <EditText
-        android:id="@+id/etPassword"
+        android:id="@+id/etPasswordL"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
@@ -46,5 +46,14 @@
         android:layout_marginTop="0dp"
         android:textColor="#FFFFFF"
         android:background="#04abd1"/>
+
+    <TextView
+        android:id="@+id/tvSignup"
+        android:textSize="20sp"
+        android:layout_margin="15dp"
+        android:textColor="#2C52F9"
+        android:text="No account ? Sign up"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 
 </LinearLayout>

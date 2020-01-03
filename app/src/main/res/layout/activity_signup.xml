@@ -9,12 +9,13 @@
     android:layout_gravity="center"
     tools:context=".SignupActivity">
 
-    <ImageView
-        android:id="@+id/imageG"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/imgProfile"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
         android:layout_gravity="center"
-        android:src="@drawable/female" />
+        android:layout_marginTop="20dp"
+        android:src="@drawable/noimage" />
     <EditText
         android:id="@+id/etFirstname"
         android:layout_width="300dp"
@@ -55,7 +56,7 @@
         android:layout_marginLeft="14dp"
         android:backgroundTint="#04abd1"
         />
-    <EditText
+   <EditText
         android:id="@+id/etConfirmPass"
         android:layout_width="300dp"
         android:hint="ConfirmPassword"
